@@ -52,9 +52,15 @@ const predictPlan = (age, gender, height, weight, fitnessGoal, activityLevel) =>
             ],
         };
         dietPlan = {
-            type: 'Calorie Deficit & High Protein',
-            meals: '3 main meals + 2 snacks',
-            description: 'Focus on nutrient-dense foods. High protein to preserve muscle while losing fat. Lots of fiber from vegetables.',
+            type: 'Indian Weight Loss (Calorie Deficit)',
+            meals: [
+                { name: 'Breakfast', calories: 350, protein: '15g', items: ['2 Moong Dal Chillas', 'Mint Chutney', '1 Boiled Egg / Tofu'] },
+                { name: 'Lunch', calories: 450, protein: '20g', items: ['1 Multigrain Roti', '1 Bowl Dal Tadka (Less Oil)', 'Green Salad', 'Curd'] },
+                { name: 'Snack', calories: 150, protein: '5g', items: ['Green Tea', 'Roasted Makhana / Chana'] },
+                { name: 'Dinner', calories: 350, protein: '20g', items: ['Grilled Paneer / Chicken Salad', 'Vegetable Soup'] }
+            ],
+            description: 'A low-calorie, high-fiber Indian diet focused on fat loss while maintaining muscle.',
+            estimated_cost: '₹3,000 - ₹4,500 / month'
         };
         weeklyPlan = [
             { day: 'Monday', focus: 'Full Body HIIT', description: 'High intensity interval training to spike heart rate.' },
@@ -82,9 +88,16 @@ const predictPlan = (age, gender, height, weight, fitnessGoal, activityLevel) =>
             ],
         };
         dietPlan = {
-            type: 'Calorie Surplus & High Protein',
-            meals: '4-6 meals',
-            description: 'You need to eat more than you burn. Prioritize protein (1.6g-2.2g per kg of bodyweight) and complex carbs.',
+            type: 'Indian Muscle Gain (High Protein)',
+            meals: [
+                { name: 'Breakfast', calories: 600, protein: '30g', items: ['4 Egg Whites + 2 Whole Eggs / Paneer Bhurji', '2 Toast', 'Banana Shake'] },
+                { name: 'Lunch', calories: 800, protein: '35g', items: ['2 Rotis / Rice', 'Rajma / Chicken Curry', 'Sabzi', 'Curd'] },
+                { name: 'Pre-Workout', calories: 300, protein: '5g', items: ['Banana', 'Black Coffee', 'Peanut Butter Toast'] },
+                { name: 'Post-Workout', calories: 400, protein: '25g', items: ['Whey Protein / 6 Egg Whites', 'Fruit'] },
+                { name: 'Dinner', calories: 600, protein: '30g', items: ['Soya Chunks / Chicken Breast', 'Rice / Roti', 'Salad'] }
+            ],
+            description: 'High calorie and protein-rich Indian diet to fuel muscle growth and recovery.',
+            estimated_cost: '₹5,000 - ₹7,000 / month'
         };
         weeklyPlan = [
             { day: 'Monday', focus: 'Chest & Triceps', description: 'Heavy pushing movements.' },
@@ -111,9 +124,15 @@ const predictPlan = (age, gender, height, weight, fitnessGoal, activityLevel) =>
             ],
         };
         dietPlan = {
-            type: 'Balanced Maintenance',
-            meals: '3 main meals',
-            description: 'Eat a variety of whole foods. Focus on consistency and portion control.',
+            type: 'Balanced Indian Maintenance',
+            meals: [
+                { name: 'Breakfast', calories: 400, protein: '15g', items: ['Poha / Upma with Peanuts', 'Milk / Tea'] },
+                { name: 'Lunch', calories: 600, protein: '20g', items: ['Roti', 'Seasonal Vegetable', 'Dal', 'Salad'] },
+                { name: 'Snack', calories: 200, protein: '5g', items: ['Fruit', 'Nuts'] },
+                { name: 'Dinner', calories: 500, protein: '20g', items: ['Khichdi / Dalia', 'Curd'] }
+            ],
+            description: 'Balanced Indian meals to maintain current weight and energy levels.',
+            estimated_cost: '₹3,000 - ₹4,000 / month'
         };
         weeklyPlan = [
             { day: 'Monday', focus: 'Full Body Strength', description: 'Compound movements for all muscle groups.' },

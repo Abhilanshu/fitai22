@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import { Activity, Utensils, Calendar, TrendingUp, CheckCircle2, Circle, Target } from 'lucide-react';
 import MuscleMap from '@/components/MuscleMap';
 import WorkoutTimer from '@/components/WorkoutTimer';
+import { motion } from 'framer-motion';
 
 export default function Dashboard() {
     const router = useRouter();
@@ -96,7 +97,12 @@ export default function Dashboard() {
     return (
         <div className="min-h-screen bg-black text-white p-6 md:p-12">
             <div className="max-w-7xl mx-auto">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-4">
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-4"
+                >
                     <div>
                         <h1 className="text-4xl font-bold mb-2">Welcome back, <span className="text-blue-500">{user?.name}</span></h1>
                         <p className="text-gray-400">Here's your personalized plan for today.</p>
@@ -112,22 +118,27 @@ export default function Dashboard() {
                             Logout
                         </button>
                     </div>
-                </div>
+                </motion.div>
 
                 {plan ? (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Left Column - Stats & Workout */}
                         <div className="lg:col-span-2 space-y-8">
                             {/* Stats Row */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div className="bg-zinc-900 p-6 rounded-2xl border border-gray-800">
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.5, delay: 0.1 }}
+                                className="grid grid-cols-2 md:grid-cols-4 gap-4"
+                            >
+                                <div className="bg-zinc-900 p-6 rounded-2xl border border-gray-800 hover:border-blue-500/30 transition-colors">
                                     <div className="flex items-center gap-3 mb-2">
                                         <Activity className="text-blue-500" size={20} />
                                         <span className="text-gray-400 text-sm">Daily Goal</span>
                                     </div>
                                     <div className="text-2xl font-bold">{plan.daily_calories} <span className="text-sm text-gray-500 font-normal">kcal</span></div>
                                 </div>
-                                <div className="bg-zinc-900 p-6 rounded-2xl border border-gray-800">
+                                <div className="bg-zinc-900 p-6 rounded-2xl border border-gray-800 hover:border-green-500/30 transition-colors">
                                     <div className="flex items-center gap-3 mb-2">
                                         <Utensils className="text-green-500" size={20} />
                                         <span className="text-gray-400 text-sm">Diet Type</span>
@@ -147,27 +158,42 @@ export default function Dashboard() {
                                         <div className="bg-gradient-to-r from-orange-500 to-red-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${(completedExercises.length * 10) % 100}%` }} />
                                     </div>
                                 </div>
-                                <div className="bg-zinc-900 p-6 rounded-2xl border border-gray-800">
+                                <div className="bg-zinc-900 p-6 rounded-2xl border border-gray-800 hover:border-purple-500/30 transition-colors">
                                     <div className="flex items-center gap-3 mb-2">
                                         <Calendar className="text-purple-500" size={20} />
                                         <span className="text-gray-400 text-sm">Plan</span>
                                     </div>
                                     <div className="text-lg font-bold">{plan.workout_plan?.frequency?.split(' ')[0] || '0'} Days</div>
                                 </div>
-                            </div>
+                            </motion.div>
 
                             {/* 3D Muscle Map */}
-                            <div className="mb-8">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.5, delay: 0.2 }}
+                                className="mb-8"
+                            >
                                 <MuscleMap />
-                            </div>
+                            </motion.div>
 
                             {/* Workout Timer */}
-                            <div className="mb-8">
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.5, delay: 0.3 }}
+                                className="mb-8"
+                            >
                                 <WorkoutTimer />
-                            </div>
+                            </motion.div>
 
                             {/* Workout Section */}
-                            <div className="bg-zinc-900 rounded-3xl border border-gray-800 overflow-hidden">
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.5, delay: 0.4 }}
+                                className="bg-zinc-900 rounded-3xl border border-gray-800 overflow-hidden"
+                            >
                                 <div className="p-8 border-b border-gray-800 flex justify-between items-center">
                                     <div>
                                         <h2 className="text-2xl font-bold mb-1">{plan.workout_plan.type}</h2>
@@ -180,7 +206,14 @@ export default function Dashboard() {
                                 <div className="p-8">
                                     <div className="space-y-4">
                                         {plan.workout_plan?.exercises?.map((ex: any, idx: number) => (
-                                            <div key={idx} className="flex items-center justify-between p-4 bg-black rounded-xl border border-gray-800 hover:border-blue-500/50 transition-colors group cursor-pointer" onClick={() => toggleExercise(ex.name)}>
+                                            <motion.div
+                                                key={idx}
+                                                initial={{ opacity: 0, x: -20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: 0.1 * idx }}
+                                                className="flex items-center justify-between p-4 bg-black rounded-xl border border-gray-800 hover:border-blue-500/50 transition-colors group cursor-pointer"
+                                                onClick={() => toggleExercise(ex.name)}
+                                            >
                                                 <div className="flex items-center gap-4">
                                                     <div className={`transition-colors ${completedExercises.includes(ex.name) ? 'text-green-500' : 'text-gray-600 group-hover:text-blue-500'}`}>
                                                         {completedExercises.includes(ex.name) ? <CheckCircle2 size={24} /> : <Circle size={24} />}
@@ -201,17 +234,22 @@ export default function Dashboard() {
                                                         Watch Video
                                                     </a>
                                                 )}
-                                            </div>
+                                            </motion.div>
                                         ))}
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         </div>
 
                         {/* Right Column - Diet & Schedule */}
                         <div className="space-y-8">
                             {/* Nutrition Section */}
-                            <div className="bg-zinc-900 rounded-3xl border border-gray-800 p-8">
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.5, delay: 0.5 }}
+                                className="bg-zinc-900 rounded-3xl border border-gray-800 p-8"
+                            >
                                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                                     <Utensils className="text-green-500" size={20} />
                                     Nutrition Plan
@@ -242,10 +280,15 @@ export default function Dashboard() {
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                            </motion.div>
 
                             {/* Weekly Schedule */}
-                            <div className="bg-zinc-900 rounded-3xl border border-gray-800 p-8">
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.5, delay: 0.6 }}
+                                className="bg-zinc-900 rounded-3xl border border-gray-800 p-8"
+                            >
                                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                                     <Calendar className="text-purple-500" size={20} />
                                     Weekly Schedule
@@ -265,7 +308,7 @@ export default function Dashboard() {
                                 ) : (
                                     <p className="text-gray-400 text-sm">{typeof plan.weekly_plan === 'string' ? plan.weekly_plan : JSON.stringify(plan.weekly_plan)}</p>
                                 )}
-                            </div>
+                            </motion.div>
                         </div>
                     </div>
                 ) : (
