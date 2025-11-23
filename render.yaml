@@ -12,7 +12,6 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
-    plan: free
 
   - type: web
     name: fitness-ml-service
@@ -23,7 +22,6 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
-    plan: free
 
   - type: web
     name: fitness-client
@@ -37,4 +35,3 @@ services:
           type: web
           name: fitness-server
           property: url
-    plan: free
