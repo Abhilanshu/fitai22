@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: fitness-server
+    env: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+    plan: free
+
+  - type: web
+    name: fitness-ml-service
+    env: python
+    rootDir: ml_service
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+    plan: free
