@@ -20,6 +20,15 @@ const FitnessPlanSchema = new mongoose.Schema({
     weekly_plan: {
         type: String,
     },
+    progress: [
+        {
+            date: {
+                type: Date,
+                default: Date.now,
+            },
+            completed_exercises: [String],
+        },
+    ],
     created_at: {
         type: Date,
         default: Date.now,
