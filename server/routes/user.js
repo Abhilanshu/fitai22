@@ -8,13 +8,16 @@ const User = require('../models/User');
 // @access  Private
 router.get('/profile', auth, async (req, res) => {
     try {
+        console.log('GET /api/user/profile for user:', req.user.id);
         const user = await User.findById(req.user.id).select('-password');
         if (!user) {
+            console.log('User profile not found');
             return res.status(400).json({ msg: 'There is no profile for this user' });
         }
+        console.log('User profile found');
         res.json(user);
     } catch (err) {
-        console.error(err.message);
+        console.error('Error in GET /api/user/profile:', err.message);
         res.status(500).send('Server Error');
     }
 });

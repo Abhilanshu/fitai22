@@ -9,8 +9,7 @@ CORS(app)
 def predict():
     data = request.get_json()
     
-    # Extract features
-    # age, gender, height, weight, fitness_goal, activity_level
+
     try:
         age = data['age']
         gender = data['gender']

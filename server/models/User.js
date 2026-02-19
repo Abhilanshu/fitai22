@@ -14,6 +14,20 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    xp: {
+        type: Number,
+        default: 0
+    },
+    badges: [{
+        name: String, // e.g., "First Step"
+        dateEarned: { type: Date, default: Date.now },
+        icon: String, // lucide icon name
+        description: String
+    }],
+    totalWorkouts: {
+        type: Number,
+        default: 0
+    },
     age: {
         type: Number,
         required: true,

@@ -1,16 +1,17 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const FitnessPlanSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
+        required: true,
     },
     workout_plan: {
-        type: String, // Can be a JSON string or structured object if we want more detail
+        type: Object, // Storing as Object since we're in the same app now
         required: true,
     },
     diet_plan: {
-        type: String,
+        type: Object,
         required: true,
     },
     daily_calories: {
@@ -18,7 +19,7 @@ const FitnessPlanSchema = new mongoose.Schema({
         required: true,
     },
     weekly_plan: {
-        type: String,
+        type: Array,
     },
     progress: [
         {
@@ -29,19 +30,10 @@ const FitnessPlanSchema = new mongoose.Schema({
             completed_exercises: [String],
         },
     ],
-    diet_logs: [
-        {
-            date: {
-                type: Date,
-                default: Date.now,
-            },
-            completed_meals: [String] // Stores names of meals eaten (e.g., "Breakfast", "Lunch")
-        }
-    ],
     created_at: {
         type: Date,
         default: Date.now,
     },
 });
 
-module.exports = mongoose.model('FitnessPlan', FitnessPlanSchema);
+export default mongoose.models.FitnessPlan || mongoose.model('FitnessPlan', FitnessPlanSchema);

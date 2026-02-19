@@ -2,14 +2,16 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Menu, X, Dumbbell } from 'lucide-react';
+import { Menu, X, Dumbbell, Download } from 'lucide-react'; // Import Download icon
 import { useRouter } from 'next/navigation';
+import { usePWA } from '../context/PWAContext'; // Import usePWA
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const router = useRouter();
+    const { supportsPWA, installPWA, promptInstall } = usePWA(); // Use PWA Context
 
     useEffect(() => {
         const handleScroll = () => {
@@ -54,9 +56,21 @@ const Navbar = () => {
                     <Link href="/#features" className="text-gray-300 hover:text-white transition-colors">Features</Link>
                     <Link href="/#about" className="text-gray-300 hover:text-white transition-colors">About</Link>
 
+                    {/* Install App Button (Desktop) */}
+                    {supportsPWA && promptInstall && (
+                        <button
+                            onClick={installPWA}
+                            className="flex items-center gap-2 text-green-400 hover:text-green-300 transition-colors font-semibold"
+                        >
+                            <Download size={18} />
+                            Install App
+                        </button>
+                    )}
+
                     {isAuthenticated ? (
                         <>
                             <Link href="/dashboard" className="text-gray-300 hover:text-white transition-colors">Dashboard</Link>
+                            <Link href="/tracker" className="text-blue-400 hover:text-blue-300 transition-colors font-semibold">AI Trainer</Link>
                             <Link href="/profile" className="text-gray-300 hover:text-white transition-colors">Profile</Link>
                             <Link href="/contact" className="text-gray-300 hover:text-white transition-colors">Contact</Link>
                             <button
@@ -95,9 +109,21 @@ const Navbar = () => {
                     <Link href="/#features" className="text-gray-300 hover:text-white text-lg" onClick={() => setIsOpen(false)}>Features</Link>
                     <Link href="/#about" className="text-gray-300 hover:text-white text-lg" onClick={() => setIsOpen(false)}>About</Link>
 
+                    {/* Install App Button (Mobile) */}
+                    {supportsPWA && promptInstall && (
+                        <button
+                            onClick={() => { installPWA(); setIsOpen(false); }}
+                            className="flex items-center gap-2 text-green-400 hover:text-green-300 text-lg font-semibold"
+                        >
+                            <Download size={20} />
+                            Install App
+                        </button>
+                    )}
+
                     {isAuthenticated ? (
                         <>
                             <Link href="/dashboard" className="text-gray-300 hover:text-white text-lg" onClick={() => setIsOpen(false)}>Dashboard</Link>
+                            <Link href="/tracker" className="text-blue-400 hover:text-blue-300 text-lg font-semibold" onClick={() => setIsOpen(false)}>AI Trainer</Link>
                             <Link href="/profile" className="text-gray-300 hover:text-white text-lg" onClick={() => setIsOpen(false)}>Profile</Link>
                             <Link href="/contact" className="text-gray-300 hover:text-white text-lg" onClick={() => setIsOpen(false)}>Contact</Link>
                             <button

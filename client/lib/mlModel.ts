@@ -1,4 +1,4 @@
-const calculateBMR = (age, gender, height, weight) => {
+export const calculateBMR = (age: number, gender: string, height: number, weight: number) => {
     // Mifflin-St Jeor Equation
     if (gender === 'male') {
         return 10 * weight + 6.25 * height - 5 * age + 5;
@@ -7,8 +7,8 @@ const calculateBMR = (age, gender, height, weight) => {
     }
 };
 
-const getActivityMultiplier = (activityLevel) => {
-    const multipliers = {
+export const getActivityMultiplier = (activityLevel: string) => {
+    const multipliers: { [key: string]: number } = {
         sedentary: 1.2,
         lightly_active: 1.375,
         moderately_active: 1.55,
@@ -18,7 +18,7 @@ const getActivityMultiplier = (activityLevel) => {
     return multipliers[activityLevel] || 1.2;
 };
 
-const predictPlan = (age, gender, height, weight, fitnessGoal, activityLevel) => {
+export const predictPlan = (age: number, gender: string, height: number, weight: number, fitnessGoal: string, activityLevel: string) => {
     const bmr = calculateBMR(age, gender, height, weight);
     const multiplier = getActivityMultiplier(activityLevel);
     const tdee = bmr * multiplier;
@@ -33,7 +33,7 @@ const predictPlan = (age, gender, height, weight, fitnessGoal, activityLevel) =>
 
     let workoutPlan = {};
     let dietPlan = {};
-    let weeklyPlan = [];
+    let weeklyPlan: any[] = [];
 
     if (fitnessGoal === 'weight_loss') {
         workoutPlan = {
@@ -42,11 +42,15 @@ const predictPlan = (age, gender, height, weight, fitnessGoal, activityLevel) =>
             duration: '45-60 mins',
             exercises: [
                 { name: 'Jumping Jacks', sets: '3x50', video: 'https://www.youtube.com/watch?v=iSSAk4XCsRA' },
+                { name: 'Burpees', sets: '3x15', video: 'https://www.youtube.com/watch?v=auBLP4yGery' },
                 { name: 'Mountain Climbers', sets: '3x45s', video: 'https://www.youtube.com/watch?v=nmwgirgXJQM' },
                 { name: 'High Knees', sets: '3x30s', video: 'https://www.youtube.com/watch?v=Z11_8x_19mw' },
-                { name: 'Squat', sets: '3x20', video: 'https://www.youtube.com/watch?v=Azl5tkCzDcc' }, // Changed from Jump Squats for better tracking
+                { name: 'Jump Squats', sets: '3x15', video: 'https://www.youtube.com/watch?v=Azl5tkCzDcc' },
                 { name: 'Plank', sets: '3x60s', video: 'https://www.youtube.com/watch?v=ASdvN_XEl_c' },
-                { name: 'Pushup', sets: '3x15', video: 'https://www.youtube.com/watch?v=IODxDxX7oi4' }, // Normalized name
+                { name: 'Russian Twists', sets: '3x20', video: 'https://www.youtube.com/watch?v=wkD8rjkodUI' },
+                { name: 'Push-ups', sets: '3x12', video: 'https://www.youtube.com/watch?v=IODxDxX7oi4' },
+                { name: 'Bicycle Crunches', sets: '3x20', video: 'https://www.youtube.com/watch?v=Iwyvozckjak' },
+                { name: 'Leg Raises', sets: '3x15', video: 'https://www.youtube.com/watch?v=JB2oyawG9KI' },
             ],
         };
         dietPlan = {
@@ -61,13 +65,13 @@ const predictPlan = (age, gender, height, weight, fitnessGoal, activityLevel) =>
             estimated_cost: '₹3,000 - ₹4,500 / month'
         };
         weeklyPlan = [
-            { day: 'Monday', focus: 'Cardio & Abs', description: 'Jumping Jacks and Planks.' },
-            { day: 'Tuesday', focus: 'Lower Body', description: 'Squats and High Knees.' },
-            { day: 'Wednesday', focus: 'Active Recovery', description: 'Light walking or stretching.' },
-            { day: 'Thursday', focus: 'Upper Body', description: 'Pushups and Mountain Climbers.' },
-            { day: 'Friday', focus: 'HIIT Circuit', description: 'Mix of all cardio moves.' },
-            { day: 'Saturday', focus: 'Endurance', description: 'Longer duration planks and squats.' },
-            { day: 'Sunday', focus: 'Rest', description: 'Complete rest.' },
+            { day: 'Monday', focus: 'Full Body HIIT', description: 'High intensity interval training to spike heart rate.' },
+            { day: 'Tuesday', focus: 'Lower Body Strength', description: 'Squats, lunges, and leg focused movements.' },
+            { day: 'Wednesday', focus: 'Active Recovery', description: 'Light yoga or a 30-minute brisk walk.' },
+            { day: 'Thursday', focus: 'Upper Body & Core', description: 'Push-ups, planks, and arm exercises.' },
+            { day: 'Friday', focus: 'Cardio Endurance', description: 'Longer duration steady-state cardio (run/cycle).' },
+            { day: 'Saturday', focus: 'Full Body Circuit', description: 'Mix of strength and cardio exercises.' },
+            { day: 'Sunday', focus: 'Rest Day', description: 'Complete rest to allow body to recover.' },
         ];
     } else if (fitnessGoal === 'muscle_gain') {
         workoutPlan = {
@@ -75,18 +79,22 @@ const predictPlan = (age, gender, height, weight, fitnessGoal, activityLevel) =>
             frequency: '5-6 days/week',
             duration: '60-90 mins',
             exercises: [
-                { name: 'Squat', sets: '4x12', video: 'https://www.youtube.com/watch?v=SW_C1A-rejs' },
-                { name: 'Pushup', sets: '4x15', video: 'https://www.youtube.com/watch?v=IODxDxX7oi4' }, // Replaces Bench Press for camera tracking
-                { name: 'Overhead Press', sets: '3x12', video: 'https://www.youtube.com/watch?v=2yjwXTZQDDI' }, // Dumbbell/Barbell
+                { name: 'Barbell Squats', sets: '4x8-12', video: 'https://www.youtube.com/watch?v=SW_C1A-rejs' },
+                { name: 'Bench Press', sets: '4x8-12', video: 'https://www.youtube.com/watch?v=rT7DgCr-3pg' },
+                { name: 'Deadlifts', sets: '3x5-8', video: 'https://www.youtube.com/watch?v=op9kVnSso6Q' },
+                { name: 'Overhead Press', sets: '3x8-12', video: 'https://www.youtube.com/watch?v=2yjwXTZQDDI' },
+                { name: 'Pull-ups', sets: '3xAMRAP', video: 'https://www.youtube.com/watch?v=eGo4IYlbE5g' },
+                { name: 'Dumbbell Rows', sets: '3x10-12', video: 'https://www.youtube.com/watch?v=roCP6wCXPqo' },
                 { name: 'Lunges', sets: '3x12/leg', video: 'https://www.youtube.com/watch?v=QOVaHwm-Q6U' },
-                { name: 'Bicep Curl', sets: '3x15', video: 'https://www.youtube.com/watch?v=ykJmrZ5v0Oo' },
-                { name: 'Glute Bridges', sets: '3x15', video: 'https://www.youtube.com/watch?v=wPM8icPu6H8' },
+                { name: 'Bicep Curls', sets: '3x12-15', video: 'https://www.youtube.com/watch?v=ykJmrZ5v0Oo' },
+                { name: 'Tricep Dips', sets: '3x12', video: 'https://www.youtube.com/watch?v=6kALZikXxLc' },
+                { name: 'Leg Press', sets: '4x10-12', video: 'https://www.youtube.com/watch?v=IZxyjW7MPJQ' },
             ],
         };
         dietPlan = {
             type: 'Indian Muscle Gain (High Protein)',
             meals: [
-                { name: 'Breakfast', calories: 600, protein: '30g', items: ['4 Egg Whites + 2 Whole Eggs / Paneer Bhurji', 'Paratha', 'Banana Shake'] },
+                { name: 'Breakfast', calories: 600, protein: '30g', items: ['4 Egg Whites + 2 Whole Eggs / Paneer Bhurji', '2 Toast', 'Banana Shake'] },
                 { name: 'Lunch', calories: 800, protein: '35g', items: ['2 Rotis / Rice', 'Rajma / Chicken Curry', 'Sabzi', 'Curd'] },
                 { name: 'Pre-Workout', calories: 300, protein: '5g', items: ['Banana', 'Black Coffee', 'Peanut Butter Toast'] },
                 { name: 'Post-Workout', calories: 400, protein: '25g', items: ['Whey Protein / 6 Egg Whites', 'Fruit'] },
@@ -96,12 +104,12 @@ const predictPlan = (age, gender, height, weight, fitnessGoal, activityLevel) =>
             estimated_cost: '₹5,000 - ₹7,000 / month'
         };
         weeklyPlan = [
-            { day: 'Monday', focus: 'Push (User Body)', description: 'Pushups and Overhead Press.' },
-            { day: 'Tuesday', focus: 'Pull & Legs', description: 'Squats and Bicep Curls.' },
-            { day: 'Wednesday', focus: 'Legs & Glutes', description: 'Lunges and Glute Bridges.' },
-            { day: 'Thursday', focus: 'Rest', description: 'Eat big and sleep.' },
-            { day: 'Friday', focus: 'Upper Body', description: 'Pushups, Curls, Press.' },
-            { day: 'Saturday', focus: 'Lower Body', description: 'Squats and Lunges volume.' },
+            { day: 'Monday', focus: 'Chest & Triceps', description: 'Heavy pushing movements.' },
+            { day: 'Tuesday', focus: 'Back & Biceps', description: 'Pulling movements and vertical pulls.' },
+            { day: 'Wednesday', focus: 'Legs & Shoulders', description: 'Squats and overhead pressing.' },
+            { day: 'Thursday', focus: 'Rest', description: 'Eat well and sleep.' },
+            { day: 'Friday', focus: 'Upper Body Hypertrophy', description: 'Higher reps for upper body muscles.' },
+            { day: 'Saturday', focus: 'Lower Body Hypertrophy', description: 'Higher reps for legs and calves.' },
             { day: 'Sunday', focus: 'Rest', description: 'Complete recovery.' },
         ];
     } else {
@@ -110,12 +118,15 @@ const predictPlan = (age, gender, height, weight, fitnessGoal, activityLevel) =>
             frequency: '3-4 days/week',
             duration: '45 mins',
             exercises: [
-                { name: 'Pushup', sets: '3x12', video: 'https://www.youtube.com/watch?v=IODxDxX7oi4' },
-                { name: 'Squat', sets: '3x20', video: 'https://www.youtube.com/watch?v=m0GcZ24DK6k' },
+                { name: 'Push-ups', sets: '3x12', video: 'https://www.youtube.com/watch?v=IODxDxX7oi4' },
+                { name: 'Bodyweight Squats', sets: '3x20', video: 'https://www.youtube.com/watch?v=m0GcZ24DK6k' },
                 { name: 'Lunges', sets: '3x12/leg', video: 'https://www.youtube.com/watch?v=QOVaHwm-Q6U' },
                 { name: 'Plank', sets: '3x60s', video: 'https://www.youtube.com/watch?v=ASdvN_XEl_c' },
                 { name: 'Glute Bridges', sets: '3x15', video: 'https://www.youtube.com/watch?v=wPM8icPu6H8' },
-                { name: 'Jumping Jacks', sets: '3x50', video: 'https://www.youtube.com/watch?v=iSSAk4XCsRA' },
+                { name: 'Dumbbell Shoulder Press', sets: '3x12', video: 'https://www.youtube.com/watch?v=qEwK657kfLI' },
+                { name: 'Lat Pulldowns', sets: '3x12', video: 'https://www.youtube.com/watch?v=CAwf7n6Luuc' },
+                { name: 'Russian Twists', sets: '3x20', video: 'https://www.youtube.com/watch?v=wkD8rjkodUI' },
+                { name: 'Mountain Climbers', sets: '3x30s', video: 'https://www.youtube.com/watch?v=nmwgirgXJQM' },
             ],
         };
         dietPlan = {
@@ -130,11 +141,11 @@ const predictPlan = (age, gender, height, weight, fitnessGoal, activityLevel) =>
             estimated_cost: '₹3,000 - ₹4,000 / month'
         };
         weeklyPlan = [
-            { day: 'Monday', focus: 'Full Body Strength', description: 'Squats, Pushups, Lunges.' },
-            { day: 'Tuesday', focus: 'Active Recovery', description: 'Walking or Yoga.' },
-            { day: 'Wednesday', focus: 'Core & Cardio', description: 'Plank and Jumping Jacks.' },
+            { day: 'Monday', focus: 'Full Body Strength', description: 'Compound movements for all muscle groups.' },
+            { day: 'Tuesday', focus: 'Rest or Light Cardio', description: 'Walking or cycling.' },
+            { day: 'Wednesday', focus: 'Core & Conditioning', description: 'Ab workouts and stamina building.' },
             { day: 'Thursday', focus: 'Rest', description: 'Recovery.' },
-            { day: 'Friday', focus: 'Full Body Endurance', description: 'Circuit of all exercises.' },
+            { day: 'Friday', focus: 'Full Body Endurance', description: 'Higher reps, lower weight.' },
             { day: 'Saturday', focus: 'Active Fun', description: 'Hiking, sports, or swimming.' },
             { day: 'Sunday', focus: 'Rest', description: 'Relaxation.' },
         ];
@@ -147,5 +158,3 @@ const predictPlan = (age, gender, height, weight, fitnessGoal, activityLevel) =>
         weekly_plan: weeklyPlan,
     };
 };
-
-module.exports = { predictPlan };

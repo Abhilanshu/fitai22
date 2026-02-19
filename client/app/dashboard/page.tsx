@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
-import { Activity, Utensils, Calendar, TrendingUp, CheckCircle2, Circle, Target } from 'lucide-react';
+import { Activity, Utensils, Calendar, TrendingUp, CheckCircle2, Circle, Target, ScanLine } from 'lucide-react';
+import { motion } from 'framer-motion';
 import MuscleMap from '@/components/MuscleMap';
 import WorkoutTimer from '@/components/WorkoutTimer';
-import { motion } from 'framer-motion';
+import AIAvatar from '@/components/AIAvatar';
 
 export default function Dashboard() {
     const router = useRouter();
@@ -14,6 +15,7 @@ export default function Dashboard() {
     const [plan, setPlan] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [completedExercises, setCompletedExercises] = useState<string[]>([]);
+    const [completedMeals, setCompletedMeals] = useState<string[]>([]);
     const [progress, setProgress] = useState(0);
 
     useEffect(() => {
@@ -32,16 +34,30 @@ export default function Dashboard() {
                 setPlan(planRes.data);
 
                 // Calculate progress for today
-                if (planRes.data.progress) {
+                if (planRes.data.progress || planRes.data.diet_logs) {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    const todayProgress = planRes.data.progress.find((p: any) => {
-                        const pDate = new Date(p.date);
-                        pDate.setHours(0, 0, 0, 0);
-                        return pDate.getTime() === today.getTime();
-                    });
-                    if (todayProgress) {
-                        setCompletedExercises(todayProgress.completed_exercises);
+
+                    if (planRes.data.progress) {
+                        const todayProgress = planRes.data.progress.find((p: any) => {
+                            const pDate = new Date(p.date);
+                            pDate.setHours(0, 0, 0, 0);
+                            return pDate.getTime() === today.getTime();
+                        });
+                        if (todayProgress) {
+                            setCompletedExercises(todayProgress.completed_exercises);
+                        }
+                    }
+
+                    if (planRes.data.diet_logs) {
+                        const todayDiet = planRes.data.diet_logs.find((d: any) => {
+                            const dDate = new Date(d.date);
+                            dDate.setHours(0, 0, 0, 0);
+                            return dDate.getTime() === today.getTime();
+                        });
+                        if (todayDiet) {
+                            setCompletedMeals(todayDiet.completed_meals);
+                        }
                     }
                 }
             } catch (err) {
@@ -55,13 +71,28 @@ export default function Dashboard() {
         fetchData();
     }, [router]);
 
-    useEffect(() => {
-        if (plan && plan.workout_plan && plan.workout_plan.exercises) {
-            const total = plan.workout_plan.exercises.length;
-            const completed = completedExercises.length;
-            setProgress(Math.round((completed / total) * 100));
+    // ... (Keep existing progress useEffect)
+
+    const toggleMeal = async (mealName: string) => {
+        const isEaten = completedMeals.includes(mealName);
+        let newCompleted;
+        if (isEaten) {
+            newCompleted = completedMeals.filter(m => m !== mealName);
+        } else {
+            newCompleted = [...completedMeals, mealName];
         }
-    }, [completedExercises, plan]);
+        setCompletedMeals(newCompleted);
+
+        try {
+            await api.post('/plan/diet-log', {
+                mealName,
+                eaten: !isEaten
+            });
+        } catch (err) {
+            console.error('Failed to log meal', err);
+            setCompletedMeals(completedMeals); // Revert
+        }
+    };
 
     const toggleExercise = async (exerciseName: string) => {
         const isCompleted = completedExercises.includes(exerciseName);
@@ -103,13 +134,27 @@ export default function Dashboard() {
                     transition={{ duration: 0.5 }}
                     className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-4"
                 >
-                    <div>
-                        <h1 className="text-4xl font-bold mb-2">Welcome back, <span className="text-blue-500">{user?.name}</span></h1>
-                        <p className="text-gray-400">Here's your personalized plan for today.</p>
+                    <div className="flex items-center gap-6">
+                        <div className="hidden md:block">
+                            <AIAvatar size={100} />
+                        </div>
+                        <div>
+                            <h1 className="text-4xl font-bold mb-2">Welcome back, <span className="text-blue-500">{user?.name}</span></h1>
+                            <p className="text-gray-400 flex items-center gap-2">
+                                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                AI System Online • Ready to assist
+                            </p>
+                        </div>
                     </div>
                     <div className="flex gap-4">
                         <button onClick={() => router.push('/')} className="px-6 py-2 bg-zinc-900 rounded-full hover:bg-zinc-800 transition-colors">
                             Home
+                        </button>
+                        <button onClick={() => router.push('/leaderboard')} className="px-6 py-2 bg-zinc-900 rounded-full hover:bg-zinc-800 transition-colors">
+                            Leaderboard
+                        </button>
+                        <button onClick={() => router.push('/profile/settings')} className="px-6 py-2 bg-zinc-900 rounded-full hover:bg-zinc-800 transition-colors">
+                            Profile
                         </button>
                         <button onClick={() => {
                             localStorage.removeItem('token');
@@ -125,20 +170,25 @@ export default function Dashboard() {
                         {/* Left Column - Stats & Workout */}
                         <div className="lg:col-span-2 space-y-8">
                             {/* Stats Row */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5, delay: 0.1 }}
-                                className="grid grid-cols-2 md:grid-cols-4 gap-4"
-                            >
-                                <div className="bg-zinc-900 p-6 rounded-2xl border border-gray-800 hover:border-blue-500/30 transition-colors">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.1 }}
+                                    className="bg-zinc-900 p-6 rounded-2xl border border-gray-800 hover:border-blue-500/30 transition-colors"
+                                >
                                     <div className="flex items-center gap-3 mb-2">
                                         <Activity className="text-blue-500" size={20} />
                                         <span className="text-gray-400 text-sm">Daily Goal</span>
                                     </div>
                                     <div className="text-2xl font-bold">{plan.daily_calories} <span className="text-sm text-gray-500 font-normal">kcal</span></div>
-                                </div>
-                                <div className="bg-zinc-900 p-6 rounded-2xl border border-gray-800 hover:border-green-500/30 transition-colors">
+                                </motion.div>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2 }}
+                                    className="bg-zinc-900 p-6 rounded-2xl border border-gray-800 hover:border-green-500/30 transition-colors"
+                                >
                                     <div className="flex items-center gap-3 mb-2">
                                         <Utensils className="text-green-500" size={20} />
                                         <span className="text-gray-400 text-sm">Diet Type</span>
@@ -146,8 +196,13 @@ export default function Dashboard() {
                                     <div className="text-lg font-bold truncate" title={plan.diet_plan?.type}>
                                         {plan.diet_plan?.type?.split(' ')[0] || 'N/A'}...
                                     </div>
-                                </div>
-                                <div className="bg-zinc-900 p-6 rounded-2xl border border-gray-800 relative overflow-hidden group">
+                                </motion.div>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.3 }}
+                                    className="bg-zinc-900 p-6 rounded-2xl border border-gray-800 relative overflow-hidden group"
+                                >
                                     <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                                     <div className="flex items-center gap-3 mb-2 relative z-10">
                                         <TrendingUp className="text-orange-500" size={20} />
@@ -157,60 +212,59 @@ export default function Dashboard() {
                                     <div className="w-full bg-gray-800 h-1.5 rounded-full mt-2 relative z-10">
                                         <div className="bg-gradient-to-r from-orange-500 to-red-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${(completedExercises.length * 10) % 100}%` }} />
                                     </div>
-                                </div>
-                                <div className="bg-zinc-900 p-6 rounded-2xl border border-gray-800 hover:border-purple-500/30 transition-colors">
+                                </motion.div>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.4 }}
+                                    className="bg-zinc-900 p-6 rounded-2xl border border-gray-800 hover:border-purple-500/30 transition-colors"
+                                >
                                     <div className="flex items-center gap-3 mb-2">
                                         <Calendar className="text-purple-500" size={20} />
                                         <span className="text-gray-400 text-sm">Plan</span>
                                     </div>
                                     <div className="text-lg font-bold">{plan.workout_plan?.frequency?.split(' ')[0] || '0'} Days</div>
-                                </div>
-                            </motion.div>
+                                </motion.div>
+                            </div>
 
                             {/* 3D Muscle Map */}
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.5, delay: 0.2 }}
+                                transition={{ delay: 0.5 }}
                                 className="mb-8"
                             >
                                 <MuscleMap />
                             </motion.div>
 
                             {/* Workout Timer */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5, delay: 0.3 }}
-                                className="mb-8"
-                            >
+                            <div className="mb-8">
                                 <WorkoutTimer />
-                            </motion.div>
+                            </div>
 
                             {/* Workout Section */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5, delay: 0.4 }}
-                                className="bg-zinc-900 rounded-3xl border border-gray-800 overflow-hidden"
-                            >
+                            <div className="bg-zinc-900 rounded-3xl border border-gray-800 overflow-hidden">
                                 <div className="p-8 border-b border-gray-800 flex justify-between items-center">
                                     <div>
                                         <h2 className="text-2xl font-bold mb-1">{plan.workout_plan.type}</h2>
                                         <p className="text-gray-400 text-sm">{plan.workout_plan.duration} • {plan.workout_plan.frequency}</p>
                                     </div>
-                                    <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-bold transition-colors">
+                                    <button
+                                        onClick={() => {
+                                            if (plan.workout_plan?.exercises?.[0]?.video) {
+                                                window.open(plan.workout_plan.exercises[0].video, '_blank');
+                                            }
+                                        }}
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-bold transition-colors"
+                                    >
                                         Start Session
                                     </button>
                                 </div>
                                 <div className="p-8">
                                     <div className="space-y-4">
                                         {plan.workout_plan?.exercises?.map((ex: any, idx: number) => (
-                                            <motion.div
+                                            <div
                                                 key={idx}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: 0.1 * idx }}
                                                 className="flex items-center justify-between p-4 bg-black rounded-xl border border-gray-800 hover:border-blue-500/50 transition-colors group cursor-pointer"
                                                 onClick={() => toggleExercise(ex.name)}
                                             >
@@ -224,55 +278,82 @@ export default function Dashboard() {
                                                     </div>
                                                 </div>
                                                 {ex.video && (
-                                                    <a
-                                                        href={ex.video}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-xs bg-gray-800 hover:bg-red-600 hover:text-white px-3 py-1 rounded transition-colors"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        Watch Video
-                                                    </a>
+                                                    <div className="flex gap-2">
+                                                        <a
+                                                            href={ex.video}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-xs bg-gray-800 hover:bg-red-600 hover:text-white px-3 py-1 rounded transition-colors"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            Watch Video
+                                                        </a>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                router.push(`/tracker?exercise=${encodeURIComponent(ex.name)}`);
+                                                            }}
+                                                            className="text-xs bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white px-3 py-1 rounded transition-colors flex items-center gap-1"
+                                                        >
+                                                            <Target size={12} />
+                                                            AI Trainer
+                                                        </button>
+                                                    </div>
                                                 )}
-                                            </motion.div>
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
-                            </motion.div>
+                            </div>
                         </div>
 
                         {/* Right Column - Diet & Schedule */}
                         <div className="space-y-8">
                             {/* Nutrition Section */}
-                            <motion.div
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.5, delay: 0.5 }}
-                                className="bg-zinc-900 rounded-3xl border border-gray-800 p-8"
-                            >
-                                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                                    <Utensils className="text-green-500" size={20} />
-                                    Nutrition Plan
-                                </h3>
+                            <div className="bg-zinc-900 rounded-3xl border border-gray-800 p-8">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-xl font-bold flex items-center gap-2">
+                                        <Utensils className="text-green-500" size={20} />
+                                        Nutrition Plan
+                                    </h3>
+                                    <button
+                                        onClick={() => router.push('/nutrition')}
+                                        className="px-3 py-1.5 bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-2"
+                                    >
+                                        <ScanLine size={14} /> Scan Meal
+                                    </button>
+                                </div>
                                 <div className="space-y-6">
                                     {Array.isArray(plan.diet_plan?.meals) ? (
-                                        plan.diet_plan.meals.map((meal: any, idx: number) => (
-                                            <div key={idx} className="relative pl-6 border-l-2 border-gray-800">
-                                                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-black border-2 border-green-500" />
-                                                <div className="mb-1 flex justify-between items-center">
-                                                    <h4 className="font-bold text-white">{meal.name}</h4>
-                                                    <span className="text-xs text-green-500 font-mono">{meal.calories} kcal</span>
+                                        plan.diet_plan.meals.map((meal: any, idx: number) => {
+                                            const isEaten = completedMeals.includes(meal.name);
+                                            return (
+                                                <div key={idx} className={`relative pl-6 border-l-2 transition-colors ${isEaten ? 'border-green-500' : 'border-gray-800'}`}>
+                                                    <div
+                                                        className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 cursor-pointer transition-colors ${isEaten ? 'bg-green-500 border-green-500' : 'bg-black border-gray-600 hover:border-green-500'}`}
+                                                        onClick={() => toggleMeal(meal.name)}
+                                                    />
+                                                    <div className="mb-1 flex justify-between items-center group cursor-pointer" onClick={() => toggleMeal(meal.name)}>
+                                                        <h4 className={`font-bold transition-colors ${isEaten ? 'text-green-500 line-through decoration-green-500/50' : 'text-white group-hover:text-green-400'}`}>{meal.name}</h4>
+                                                        <span className="text-xs text-green-500 font-mono">{meal.calories} kcal</span>
+                                                    </div>
+                                                    <ul className="text-sm text-gray-400 space-y-1">
+                                                        {meal.items?.map((item: string, i: number) => (
+                                                            <li key={i}>• {item}</li>
+                                                        ))}
+                                                    </ul>
+                                                    <div className="mt-2 text-xs text-blue-400 font-mono">Protein: {meal.protein}</div>
                                                 </div>
-                                                <ul className="text-sm text-gray-400 space-y-1">
-                                                    {meal.items?.map((item: string, i: number) => (
-                                                        <li key={i}>• {item}</li>
-                                                    ))}
-                                                </ul>
-                                                <div className="mt-2 text-xs text-blue-400 font-mono">Protein: {meal.protein}</div>
-                                            </div>
-                                        ))
+                                            )
+                                        })
                                     ) : (
-                                        <p className="text-gray-400">{plan.diet_plan?.description || 'No diet plan available.'}</p>
+                                        <div className="text-gray-400">
+                                            {typeof plan.diet_plan?.meals === 'string' ? (
+                                                <p>{plan.diet_plan.meals}</p>
+                                            ) : (
+                                                <p>{plan.diet_plan?.description || 'No diet plan available.'}</p>
+                                            )}
+                                        </div>
                                     )}
                                     {plan.diet_plan?.estimated_cost && (
                                         <div className="mt-4 pt-4 border-t border-gray-800 text-sm text-gray-400">
@@ -280,15 +361,10 @@ export default function Dashboard() {
                                         </div>
                                     )}
                                 </div>
-                            </motion.div>
+                            </div>
 
                             {/* Weekly Schedule */}
-                            <motion.div
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.5, delay: 0.6 }}
-                                className="bg-zinc-900 rounded-3xl border border-gray-800 p-8"
-                            >
+                            <div className="bg-zinc-900 rounded-3xl border border-gray-800 p-8">
                                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                                     <Calendar className="text-purple-500" size={20} />
                                     Weekly Schedule
@@ -308,7 +384,7 @@ export default function Dashboard() {
                                 ) : (
                                     <p className="text-gray-400 text-sm">{typeof plan.weekly_plan === 'string' ? plan.weekly_plan : JSON.stringify(plan.weekly_plan)}</p>
                                 )}
-                            </motion.div>
+                            </div>
                         </div>
                     </div>
                 ) : (

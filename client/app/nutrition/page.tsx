@@ -1,232 +1,265 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { Camera, Upload, Check, X, Loader2, Utensils, Info, ScanLine } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { Utensils, ChevronRight, Check } from 'lucide-react';
 import api from '@/lib/api';
 
-export default function Nutrition() {
+// Mock Database of detectable foods
+const MOCK_FOOD_DATABASE = [
+    { name: 'Grilled Chicken Salad', calories: 450, protein: '40g', carbs: '12g', fat: '15g' },
+    { name: 'Oatmeal with Berries', calories: 320, protein: '8g', carbs: '55g', fat: '6g' },
+    { name: 'Protein Shake', calories: 180, protein: '25g', carbs: '5g', fat: '2g' },
+    { name: 'Avocado Toast', calories: 380, protein: '12g', carbs: '45g', fat: '18g' },
+    { name: 'Salmon & Quinoa', calories: 550, protein: '35g', carbs: '40g', fat: '22g' },
+    { name: 'Greek Yogurt Parfait', calories: 280, protein: '15g', carbs: '35g', fat: '5g' },
+];
+
+export default function NutritionScanner() {
     const router = useRouter();
-    const [step, setStep] = useState(1);
-    const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState({
-        age: '',
-        bodyType: '',
-        height: '',
-        weight: '',
-        allergies: [] as string[],
-        preferences: [] as string[],
-    });
+    const [image, setImage] = useState<string | null>(null);
+    const [analyzing, setAnalyzing] = useState(false);
+    const [result, setResult] = useState<any>(null);
+    const [logging, setLogging] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [cameraActive, setCameraActive] = useState(false);
 
-    const bodyTypes = [
-        { id: 'ectomorph', name: 'Ectomorph', desc: 'Lean and long, difficulty building muscle.' },
-        { id: 'mesomorph', name: 'Mesomorph', desc: 'Muscular and well-built, high metabolism.' },
-        { id: 'endomorph', name: 'Endomorph', desc: 'Big, high body fat, often pear-shaped.' },
-    ];
-
-    const allergiesList = ['Nuts', 'Dairy', 'Gluten', 'Shellfish', 'Eggs', 'Soy'];
-    const preferencesList = ['Vegetarian', 'Vegan', 'Keto', 'Paleo', 'High Protein', 'Low Carb'];
-
-    const handleNext = () => setStep(step + 1);
-    const handleBack = () => setStep(step - 1);
-
-    const toggleSelection = (field: 'allergies' | 'preferences', item: string) => {
-        setFormData(prev => {
-            const list = prev[field];
-            if (list.includes(item)) {
-                return { ...prev, [field]: list.filter(i => i !== item) };
-            } else {
-                return { ...prev, [field]: [...list, item] };
-            }
-        });
-    };
-
-    const calculateBMI = () => {
-        if (formData.height && formData.weight) {
-            const h = parseFloat(formData.height) / 100;
-            const w = parseFloat(formData.weight);
-            return (w / (h * h)).toFixed(1);
-        }
-        return '--';
-    };
-
-    const handleSubmit = async () => {
-        setLoading(true);
+    // Camera handling
+    const startCamera = async () => {
         try {
-            // In a real app, we would send this specific nutrition data
-            // For now, we'll trigger the generic plan generation which uses the core profile
-            // But we can simulate "saving" these preferences
-            console.log('Generating nutrition plan with:', formData);
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                setCameraActive(true);
+            }
+        } catch (err) {
+            console.error('Camera access denied:', err);
+            alert('Camera access denied. Please use "Upload Image" instead.');
+        }
+    };
 
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
+    const stopCamera = () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+            const stream = videoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
+            setCameraActive(false);
+        }
+    };
 
-            // Call the generate endpoint (re-using existing logic for now)
-            await api.post('/plan/generate');
+    const captureImage = () => {
+        if (videoRef.current) {
+            const canvas = document.createElement('canvas');
+            canvas.width = videoRef.current.videoWidth;
+            canvas.height = videoRef.current.videoHeight;
+            canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg');
+            setImage(dataUrl);
+            stopCamera();
+            analyzeImage();
+        }
+    };
 
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImage(reader.result as string);
+                analyzeImage();
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const analyzeImage = () => {
+        setAnalyzing(true);
+        setResult(null);
+
+        // Simulate AI Delay (2-3 seconds)
+        setTimeout(() => {
+            const randomFood = MOCK_FOOD_DATABASE[Math.floor(Math.random() * MOCK_FOOD_DATABASE.length)];
+            setResult(randomFood);
+            setAnalyzing(false);
+        }, 2500);
+    };
+
+    const logMeal = async () => {
+        if (!result) return;
+        setLogging(true);
+        try {
+            await api.post('/plan/diet-log', {
+                mealName: result.name, // Log the detected name
+                eaten: true
+            });
+            // Show success and redirect
+            alert(`Logged ${result.name} successfully!`);
             router.push('/dashboard');
         } catch (err) {
-            console.error(err);
+            console.error('Failed to log meal:', err);
+            alert('Failed to log meal. Please try again.');
         } finally {
-            setLoading(false);
+            setLogging(false);
         }
     };
+
+    const reset = () => {
+        setImage(null);
+        setResult(null);
+        setAnalyzing(false);
+        stopCamera();
+    };
+
+    useEffect(() => {
+        return () => stopCamera();
+    }, []);
 
     return (
         <div className="min-h-screen bg-black text-white p-6 md:p-12">
             <div className="max-w-2xl mx-auto">
-                <div className="mb-8">
-                    <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
-                        <Utensils className="text-green-500" size={40} />
-                        Smart Nutrition
+                <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-3xl font-bold flex items-center gap-3">
+                        <ScanLine className="text-purple-500" size={32} />
+                        AI Meal Scanner
                     </h1>
-                    <p className="text-gray-400">Let's build a meal plan that fits your biology.</p>
+                    <button onClick={() => router.push('/dashboard')} className="p-2 hover:bg-zinc-800 rounded-full">
+                        <X />
+                    </button>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="w-full bg-gray-800 h-2 rounded-full mb-12">
-                    <div
-                        className="bg-green-500 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${(step / 3) * 100}%` }}
-                    />
-                </div>
+                <div className="bg-zinc-900 rounded-3xl border border-gray-800 overflow-hidden relative min-h-[400px] flex flex-col items-center justify-center">
 
-                <div className="bg-zinc-900 p-8 rounded-3xl border border-gray-800 min-h-[400px] flex flex-col justify-between">
-                    {step === 1 && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
-                            <h2 className="text-2xl font-bold">Basic Metrics</h2>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-gray-400 text-sm mb-2">Age</label>
-                                    <input
-                                        type="number"
-                                        value={formData.age}
-                                        onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                                        className="w-full bg-black border border-gray-800 rounded-lg px-4 py-3 focus:border-green-500 outline-none"
-                                        placeholder="25"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-gray-400 text-sm mb-2">BMI (Auto)</label>
-                                    <div className="w-full bg-gray-800 rounded-lg px-4 py-3 text-gray-400">
-                                        {calculateBMI()}
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-gray-400 text-sm mb-2">Height (cm)</label>
-                                    <input
-                                        type="number"
-                                        value={formData.height}
-                                        onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                                        className="w-full bg-black border border-gray-800 rounded-lg px-4 py-3 focus:border-green-500 outline-none"
-                                        placeholder="175"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-gray-400 text-sm mb-2">Weight (kg)</label>
-                                    <input
-                                        type="number"
-                                        value={formData.weight}
-                                        onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                                        className="w-full bg-black border border-gray-800 rounded-lg px-4 py-3 focus:border-green-500 outline-none"
-                                        placeholder="70"
-                                    />
-                                </div>
+                    {!image && !cameraActive && (
+                        <div className="text-center p-8 space-y-6">
+                            <div className="w-24 h-24 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                                <Utensils size={40} className="text-gray-500" />
+                            </div>
+                            <h2 className="text-xl font-bold">What are you eating?</h2>
+                            <p className="text-gray-400 max-w-sm mx-auto">
+                                Snap a photo or upload an image. Our AI will analyze the nutrition for you.
+                            </p>
+
+                            <div className="flex gap-4 justify-center mt-8">
+                                <button
+                                    onClick={startCamera}
+                                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold flex items-center gap-2 transition-transform hover:scale-105"
+                                >
+                                    <Camera size={20} /> Take Photo
+                                </button>
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl font-bold flex items-center gap-2 transition-transform hover:scale-105"
+                                >
+                                    <Upload size={20} /> Upload
+                                </button>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    hidden
+                                    accept="image/*"
+                                    onChange={handleFileUpload}
+                                />
                             </div>
                         </div>
                     )}
 
-                    {step === 2 && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
-                            <h2 className="text-2xl font-bold">Body Type</h2>
-                            <div className="space-y-4">
-                                {bodyTypes.map((type) => (
-                                    <div
-                                        key={type.id}
-                                        onClick={() => setFormData({ ...formData, bodyType: type.id })}
-                                        className={`p-4 rounded-xl border cursor-pointer transition-all ${formData.bodyType === type.id
-                                                ? 'bg-green-500/10 border-green-500'
-                                                : 'bg-black border-gray-800 hover:border-gray-600'
-                                            }`}
-                                    >
-                                        <div className="flex justify-between items-center">
-                                            <h3 className="font-bold text-lg">{type.name}</h3>
-                                            {formData.bodyType === type.id && <Check className="text-green-500" />}
+                    {cameraActive && (
+                        <div className="relative w-full h-full flex flex-col items-center">
+                            <video ref={videoRef} autoPlay playsInline className="w-full h-[400px] object-cover" />
+                            <button
+                                onClick={captureImage}
+                                className="absolute bottom-6 left-1/2 -translate-x-1/2 w-16 h-16 bg-white rounded-full border-4 border-gray-300 shadow-xl flex items-center justify-center hover:scale-110 transition-transform"
+                            >
+                                <div className="w-12 h-12 bg-transparent border-2 border-black rounded-full" />
+                            </button>
+                        </div>
+                    )}
+
+                    {image && (
+                        <div className="relative w-full h-full">
+                            <img src={image} alt="Meal" className="w-full max-h-[500px] object-cover opacity-80" />
+
+                            {/* Analyzing Overlay */}
+                            {analyzing && (
+                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
+                                    <div className="text-center">
+                                        <div className="relative w-20 h-20 mx-auto mb-4">
+                                            <div className="absolute inset-0 border-4 border-purple-500/30 rounded-full animate-ping" />
+                                            <div className="absolute inset-0 border-4 border-t-purple-500 rounded-full animate-spin" />
+                                            <ScanLine className="absolute inset-0 m-auto text-purple-500" />
                                         </div>
-                                        <p className="text-gray-400 text-sm mt-1">{type.desc}</p>
+                                        <h3 className="text-xl font-bold animate-pulse">Analyzing Food...</h3>
+                                        <p className="text-sm text-gray-400 mt-2">Identifying ingredients & macros</p>
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            )}
+
+                            {/* Result Card */}
+                            {!analyzing && result && (
+                                <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black via-black/90 to-transparent pt-12 p-6">
+                                    <motion.div
+                                        initial={{ y: 50, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        className="bg-zinc-900 border border-purple-500/30 rounded-2xl p-6 shadow-2xl"
+                                    >
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div>
+                                                <div className="text-purple-400 text-xs font-mono mb-1 uppercase tracking-wider flex items-center gap-1">
+                                                    <ScanLine size={12} /> AI Detected
+                                                </div>
+                                                <h2 className="text-2xl font-bold">{result.name}</h2>
+                                            </div>
+                                            <div className="bg-green-500/20 text-green-400 px-3 py-1 rounded-lg font-bold text-sm">
+                                                {result.calories} kcal
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-4 mb-6">
+                                            <div className="bg-black/40 p-3 rounded-xl text-center">
+                                                <div className="text-gray-400 text-xs">Protein</div>
+                                                <div className="font-bold text-blue-400">{result.protein}</div>
+                                            </div>
+                                            <div className="bg-black/40 p-3 rounded-xl text-center">
+                                                <div className="text-gray-400 text-xs">Carbs</div>
+                                                <div className="font-bold text-orange-400">{result.carbs}</div>
+                                            </div>
+                                            <div className="bg-black/40 p-3 rounded-xl text-center">
+                                                <div className="text-gray-400 text-xs">Fats</div>
+                                                <div className="font-bold text-yellow-400">{result.fat}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={reset}
+                                                className="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl font-bold transition-colors"
+                                            >
+                                                Scan Again
+                                            </button>
+                                            <button
+                                                onClick={logMeal}
+                                                disabled={logging}
+                                                className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                {logging ? <Loader2 className="animate-spin" /> : <Check size={20} />}
+                                                Log to Plan
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            )}
+
                         </div>
                     )}
 
-                    {step === 3 && (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-right-8">
-                            <div>
-                                <h2 className="text-2xl font-bold mb-4">Dietary Preferences</h2>
-                                <div className="flex flex-wrap gap-3">
-                                    {preferencesList.map((pref) => (
-                                        <button
-                                            key={pref}
-                                            onClick={() => toggleSelection('preferences', pref)}
-                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${formData.preferences.includes(pref)
-                                                    ? 'bg-green-500 text-black'
-                                                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                                                }`}
-                                        >
-                                            {pref}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                </div>
 
-                            <div>
-                                <h2 className="text-2xl font-bold mb-4">Allergies / Restrictions</h2>
-                                <div className="flex flex-wrap gap-3">
-                                    {allergiesList.map((allergy) => (
-                                        <button
-                                            key={allergy}
-                                            onClick={() => toggleSelection('allergies', allergy)}
-                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${formData.allergies.includes(allergy)
-                                                    ? 'bg-red-500 text-white'
-                                                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                                                }`}
-                                        >
-                                            {allergy}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="flex justify-between mt-8 pt-6 border-t border-gray-800">
-                        <button
-                            onClick={handleBack}
-                            disabled={step === 1}
-                            className={`px-6 py-3 rounded-xl font-bold transition-colors ${step === 1 ? 'text-gray-600 cursor-not-allowed' : 'text-white hover:bg-gray-800'
-                                }`}
-                        >
-                            Back
-                        </button>
-
-                        {step < 3 ? (
-                            <button
-                                onClick={handleNext}
-                                className="px-8 py-3 bg-white text-black rounded-xl font-bold hover:bg-gray-200 transition-colors flex items-center gap-2"
-                            >
-                                Next <ChevronRight size={18} />
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handleSubmit}
-                                disabled={loading}
-                                className="px-8 py-3 bg-green-500 text-black rounded-xl font-bold hover:bg-green-400 transition-colors flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {loading ? 'Generating...' : 'Generate Plan'}
-                            </button>
-                        )}
-                    </div>
+                <div className="mt-6 flex items-start gap-3 bg-blue-500/10 p-4 rounded-xl text-sm text-blue-300 border border-blue-500/20">
+                    <Info className="shrink-0 mt-0.5" size={16} />
+                    <p>
+                        This is a <strong>Simulation</strong>. In a production app, this would connect to the OpenAI Vision API or a custom TensorFlow model to analyze real food pixels.
+                    </p>
                 </div>
             </div>
         </div>

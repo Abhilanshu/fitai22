@@ -38,11 +38,15 @@ export default function Wearables() {
     const [connectedDevice, setConnectedDevice] = useState<BluetoothDevice | null>(null);
     const [deviceInfo, setDeviceInfo] = useState<{ manufacturer?: string; model?: string }>({});
 
+    // Health Metrics
     const [heartRate, setHeartRate] = useState<number | null>(null);
     const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
     const [steps, setSteps] = useState<number | null>(null);
+    const [cadence, setCadence] = useState<number | null>(null);
+    const [speed, setSpeed] = useState<number | null>(null);
     const [sleep, setSleep] = useState<string | null>(null);
     const [oxygen, setOxygen] = useState<number | null>(null);
+
     const [error, setError] = useState<string | null>(null);
     const [isSupported, setIsSupported] = useState(true);
 
@@ -53,6 +57,7 @@ export default function Wearables() {
 
     // Refs for simulation intervals to clear them properly
     const simulationInterval = useRef<NodeJS.Timeout | null>(null);
+    const currentStepsRef = useRef(842);
 
     useEffect(() => {
         if (typeof navigator !== 'undefined' && !navigator.bluetooth) {
@@ -74,16 +79,19 @@ export default function Wearables() {
         addLog('Starting scan...');
 
         try {
-            // Request ANY device to show a full list
+            // Request device with expanded optional services to maximize compatibility
             const device = await navigator.bluetooth.requestDevice({
                 acceptAllDevices: true,
                 optionalServices: [
                     'heart_rate',
                     'battery_service',
                     'immediate_alert',
-                    'device_information', // 0x180A
-                    'pulse_oximeter',     // 0x1822
-                    'health_thermometer'  // 0x1809
+                    'device_information',
+                    'pulse_oximeter',
+                    'health_thermometer',
+                    'running_speed_and_cadence', // Steps/Speed
+                    'cycling_speed_and_cadence',
+                    'generic_access' // To read device name if missing
                 ]
             });
 
@@ -94,6 +102,24 @@ export default function Wearables() {
             setConnectedDevice(device);
             addLog('Connected to GATT Server');
             setIsSyncing(true);
+
+            // 0. Try to resolve Name from Generic Access if missing
+            if (!device.name) {
+                try {
+                    const accessService = await server?.getPrimaryService('generic_access');
+                    const nameChar = await accessService?.getCharacteristic('gap.device_name');
+                    const nameVal = await nameChar?.readValue();
+                    const realName = new TextDecoder().decode(nameVal);
+                    if (realName) {
+                        // Manually update the connected device object for UI
+                        Object.defineProperty(device, 'name', { value: realName, writable: true });
+                        setConnectedDevice({ ...device }); // Trigger re-render
+                        addLog(`Resolved Device Name: ${realName}`);
+                    }
+                } catch (e) {
+                    addLog('Could not resolve device name from GATT');
+                }
+            }
 
             // 1. Try Device Information (Manufacturer & Model)
             try {
@@ -136,7 +162,14 @@ export default function Wearables() {
 
                 hrChar?.addEventListener('characteristicvaluechanged', (event: any) => {
                     const value = event.target.value;
-                    const hr = value.getUint8(1);
+                    const flags = value.getUint8(0);
+                    let hr;
+                    // Check format bit (0 = uint8, 1 = uint16)
+                    if ((flags & 0x01) === 0) {
+                        hr = value.getUint8(1);
+                    } else {
+                        hr = value.getUint16(1, true); // Little Endian
+                    }
                     setHeartRate(hr);
                     addLog(`Received HR: ${hr} BPM`);
                 });
@@ -158,6 +191,38 @@ export default function Wearables() {
                 addLog(`Read Battery Level: ${level}%`);
             } catch (e) {
                 addLog('Battery Service NOT found');
+            }
+
+            // 3.5 Try Running Speed & Cadence (Steps/Speed)
+            try {
+                addLog('Attempting to read RSC Service...');
+                const rscService = await server?.getPrimaryService('running_speed_and_cadence');
+                if (rscService) {
+                    setServices(prev => [...prev, 'RSC Service (0x1814)']);
+                    addLog('RSC Service found (Steps/Speed)');
+
+                    const rscChar = await rscService.getCharacteristic('rsc_measurement');
+                    await rscChar.startNotifications();
+
+                    rscChar.addEventListener('characteristicvaluechanged', (event: any) => {
+                        const value = event.target.value;
+                        const flags = value.getUint8(0);
+
+                        // Parse Speed (Unit: m/s * 256)
+                        const rawSpeed = value.getUint16(1, true);
+                        const speedMps = rawSpeed / 256; // meters per second
+                        const speedKph = (speedMps * 3.6).toFixed(1); // km/h
+
+                        // Parse Cadence (Unit: steps/minute)
+                        const cad = value.getUint8(3);
+
+                        setSpeed(parseFloat(speedKph));
+                        setCadence(cad);
+                        addLog(`RSC Data - Speed: ${speedKph}km/h, Cadence: ${cad} spm`);
+                    });
+                }
+            } catch (e) {
+                addLog('RSC Service not supported by this device.');
             }
 
             // 4. Try Immediate Alert (Find My Device)
@@ -199,28 +264,37 @@ export default function Wearables() {
         stopSimulation(); // Clear existing
 
         // Initial Values
-        let currentSteps = 842;
+        currentStepsRef.current = 842;
         let currentOxygen = 98;
 
-        setSteps(currentSteps);
+        setSteps(currentStepsRef.current);
         setSleep('7h 12m');
         setOxygen(currentOxygen);
 
         setHeartRate((prev) => prev || 72);
 
         simulationInterval.current = setInterval(() => {
-            currentSteps += Math.floor(Math.random() * 2) + 1;
-            setSteps(currentSteps);
+            // Heart Rate
+            const simHR = 70 + Math.floor(Math.random() * 20);
+            setHeartRate(simHR);
+
+            // Cadence (90-110 steps/min)
+            const simCadence = 90 + Math.floor(Math.random() * 20);
+            setCadence(simCadence);
+
+            // Speed (11-13 km/h via treadmill pace)
+            const simSpeed = 11 + parseFloat((Math.random() * 2).toFixed(1));
+            setSpeed(simSpeed);
+
+            addLog(`[SIM] HR: ${simHR}, Cadence: ${simCadence}, Speed: ${simSpeed}`);
+
+            currentStepsRef.current += Math.floor(Math.random() * 2) + 1;
+            setSteps(currentStepsRef.current);
 
             if (Math.random() > 0.8) {
                 currentOxygen = 97 + Math.floor(Math.random() * 3);
                 setOxygen(currentOxygen);
             }
-
-            setHeartRate((prev) => {
-                if (!prev) return 72;
-                return prev + (Math.random() > 0.5 ? 1 : -1);
-            });
 
         }, 2000);
     };
@@ -239,6 +313,8 @@ export default function Wearables() {
         setHeartRate(null);
         setBatteryLevel(null);
         setSteps(null);
+        setCadence(null);
+        setSpeed(null);
         setSleep(null);
         setOxygen(null);
         setServices([]);
@@ -296,6 +372,7 @@ export default function Wearables() {
                         <p className="text-gray-400">
                             Connect any Bluetooth device. Use <strong>Strict Mode</strong> to verify real data.
                         </p>
+
                     </div>
 
                     <button
@@ -409,81 +486,80 @@ export default function Wearables() {
                     {/* Live Data Dashboard */}
                     <div className={`lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 transition-all duration-500 ${connectedDevice && !isSyncing ? 'opacity-100' : 'opacity-50 blur-sm pointer-events-none'}`}>
 
-                        {/* Heart Rate */}
-                        <div className="bg-zinc-900 p-6 rounded-3xl border border-gray-800 flex items-center justify-between">
-                            <div>
-                                <div className="text-gray-400 text-sm mb-1 flex items-center gap-2">
-                                    <Heart className="text-red-500 animate-pulse" size={16} /> Heart Rate
-                                </div>
-                                <div className="text-4xl font-bold text-white">
-                                    {heartRate || '--'} <span className="text-lg text-gray-500">BPM</span>
-                                </div>
-                                {strictMode && !heartRate && <div className="text-xs text-red-500 mt-1">No Real Data</div>}
-                            </div>
-                            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
-                                <Heart size={24} />
+                        {/* Heart Rate Card */}
+                        <div className="bg-zinc-900/50 p-6 rounded-2xl border border-gray-800 text-center relative overflow-hidden group hover:border-red-500/50 transition-all">
+                            <div className="absolute inset-0 bg-red-500/5 group-hover:bg-red-500/10 transition-colors" />
+                            <Heart className={`mx-auto mb-3 ${heartRate ? 'text-red-500 animate-pulse' : 'text-gray-600'}`} size={40} />
+                            <h3 className="text-gray-400 text-sm font-bold uppercase tracking-wider">Heart Rate</h3>
+                            <div className="text-5xl font-black text-white mt-2 flex items-baseline justify-center gap-2">
+                                {heartRate || '--'}
+                                <span className="text-lg font-medium text-gray-500">BPM</span>
                             </div>
                         </div>
 
-                        {/* Steps */}
-                        <div className="bg-zinc-900 p-6 rounded-3xl border border-gray-800 flex items-center justify-between">
-                            <div>
-                                <div className="text-gray-400 text-sm mb-1 flex items-center gap-2">
-                                    <Footprints className="text-orange-500" size={16} /> Steps
-                                </div>
-                                <div className="text-4xl font-bold text-white">
-                                    {steps || '--'}
-                                </div>
-                                {strictMode && !steps && <div className="text-xs text-red-500 mt-1">No Real Data</div>}
-                            </div>
-                            <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500">
-                                <Footprints size={24} />
+                        {/* Steps Card */}
+                        <div className="bg-zinc-900/50 p-6 rounded-2xl border border-gray-800 text-center relative overflow-hidden group hover:border-orange-500/50 transition-all">
+                            <div className="absolute inset-0 bg-orange-500/5 group-hover:bg-orange-500/10 transition-colors" />
+                            <Footprints className={`mx-auto mb-3 ${steps ? 'text-orange-500' : 'text-gray-600'}`} size={40} />
+                            <h3 className="text-gray-400 text-sm font-bold uppercase tracking-wider">Total Steps</h3>
+                            <div className="text-5xl font-black text-white mt-2 flex items-baseline justify-center gap-2">
+                                {steps || '--'}
                             </div>
                         </div>
 
-                        {/* Sleep */}
-                        <div className="bg-zinc-900 p-6 rounded-3xl border border-gray-800 flex items-center justify-between">
-                            <div>
-                                <div className="text-gray-400 text-sm mb-1 flex items-center gap-2">
-                                    <Moon className="text-purple-500" size={16} /> Sleep
-                                </div>
-                                <div className="text-4xl font-bold text-white">
-                                    {sleep || '--'}
-                                </div>
-                                {strictMode && !sleep && <div className="text-xs text-red-500 mt-1">No Real Data</div>}
-                            </div>
-                            <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500">
-                                <Moon size={24} />
+                        {/* Speed Card */}
+                        <div className="bg-zinc-900/50 p-6 rounded-2xl border border-gray-800 text-center relative overflow-hidden group hover:border-blue-500/50 transition-all">
+                            <div className="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition-colors" />
+                            <Wind className={`mx-auto mb-3 ${speed ? 'text-blue-500' : 'text-gray-600'}`} size={40} />
+                            <h3 className="text-gray-400 text-sm font-bold uppercase tracking-wider">Speed</h3>
+                            <div className="text-5xl font-black text-white mt-2 flex items-baseline justify-center gap-2">
+                                {speed || '--'}
+                                <span className="text-lg font-medium text-gray-500">KM/H</span>
                             </div>
                         </div>
 
-                        {/* Oxygen */}
-                        <div className="bg-zinc-900 p-6 rounded-3xl border border-gray-800 flex items-center justify-between">
-                            <div>
-                                <div className="text-gray-400 text-sm mb-1 flex items-center gap-2">
-                                    <Wind className="text-cyan-500" size={16} /> Oxygen (SpO2)
-                                </div>
-                                <div className="text-4xl font-bold text-white">
-                                    {oxygen ? `${oxygen}%` : '--'}
-                                </div>
-                                {strictMode && !oxygen && <div className="text-xs text-red-500 mt-1">No Real Data</div>}
-                            </div>
-                            <div className="w-12 h-12 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-500">
-                                <Wind size={24} />
+                        {/* Cadence Card (Steps/Min) */}
+                        <div className="bg-zinc-900/50 p-6 rounded-2xl border border-gray-800 text-center relative overflow-hidden group hover:border-green-500/50 transition-all">
+                            <div className="absolute inset-0 bg-green-500/5 group-hover:bg-green-500/10 transition-colors" />
+                            <Footprints className={`mx-auto mb-3 ${cadence ? 'text-green-500' : 'text-gray-600'}`} size={40} />
+                            <h3 className="text-gray-400 text-sm font-bold uppercase tracking-wider">Cadence</h3>
+                            <div className="text-5xl font-black text-white mt-2 flex items-baseline justify-center gap-2">
+                                {cadence || '--'}
+                                <span className="text-lg font-medium text-gray-500">SPM</span>
                             </div>
                         </div>
 
-                        {/* Battery */}
-                        <div className="md:col-span-2 bg-zinc-900 p-6 rounded-3xl border border-gray-800 flex items-center justify-between">
-                            <div>
-                                <div className="text-gray-400 text-sm mb-1 flex items-center gap-2">
-                                    <Battery className="text-green-500" size={16} /> Device Battery
-                                </div>
-                                <div className="text-2xl font-bold text-white">
-                                    {batteryLevel !== null ? `${batteryLevel}%` : '--'}
-                                </div>
+                        {/* Sleep Card */}
+                        <div className="bg-zinc-900/50 p-6 rounded-2xl border border-gray-800 text-center relative overflow-hidden group hover:border-purple-500/50 transition-all">
+                            <div className="absolute inset-0 bg-purple-500/5 group-hover:bg-purple-500/10 transition-colors" />
+                            <Moon className={`mx-auto mb-3 ${sleep ? 'text-purple-500' : 'text-gray-600'}`} size={40} />
+                            <h3 className="text-gray-400 text-sm font-bold uppercase tracking-wider">Sleep</h3>
+                            <div className="text-4xl font-black text-white mt-4 flex items-baseline justify-center gap-2">
+                                {sleep || '--'}
                             </div>
-                            <div className="w-full max-w-[200px] bg-gray-800 h-2 rounded-full mt-2">
+                        </div>
+
+                        {/* Oxygen (SpO2) Card */}
+                        <div className="bg-zinc-900/50 p-6 rounded-2xl border border-gray-800 text-center relative overflow-hidden group hover:border-cyan-500/50 transition-all">
+                            <div className="absolute inset-0 bg-cyan-500/5 group-hover:bg-cyan-500/10 transition-colors" />
+                            <Wind className={`mx-auto mb-3 ${oxygen ? 'text-cyan-500' : 'text-gray-600'}`} size={40} />
+                            <h3 className="text-gray-400 text-sm font-bold uppercase tracking-wider">SpO2 (Oxygen)</h3>
+                            <div className="text-5xl font-black text-white mt-2 flex items-baseline justify-center gap-2">
+                                {oxygen || '--'}
+                                <span className="text-lg font-medium text-gray-500">%</span>
+                            </div>
+                        </div>
+
+                        {/* Battery Card */}
+                        <div className="bg-zinc-900/50 p-6 rounded-2xl border border-gray-800 text-center relative overflow-hidden group hover:border-green-500/50 transition-all md:col-span-2">
+                            <div className="absolute inset-0 bg-green-500/5 group-hover:bg-green-500/10 transition-colors" />
+                            <Battery className={`mx-auto mb-3 ${batteryLevel ? 'text-green-500' : 'text-gray-600'}`} size={40} />
+                            <h3 className="text-gray-400 text-sm font-bold uppercase tracking-wider">Device Battery</h3>
+                            <div className="text-5xl font-black text-white mt-2 flex items-baseline justify-center gap-2">
+                                {batteryLevel || '--'}
+                                <span className="text-lg font-medium text-gray-500">%</span>
+                            </div>
+                            <div className="w-full max-w-[200px] bg-gray-800 h-2 rounded-full mt-4 mx-auto">
                                 <div
                                     className="bg-green-500 h-2 rounded-full transition-all duration-500"
                                     style={{ width: `${batteryLevel || 0}%` }}
@@ -493,17 +569,17 @@ export default function Wearables() {
 
                     </div>
                 </div>
-
-                {isSyncing && (
-                    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-                        <div className="bg-zinc-900 p-8 rounded-3xl border border-gray-800 text-center">
-                            <Loader2 className="animate-spin text-blue-500 mx-auto mb-4" size={48} />
-                            <h3 className="text-xl font-bold">Syncing with Device...</h3>
-                            <p className="text-gray-400 mt-2">Reading health metrics</p>
-                        </div>
-                    </div>
-                )}
             </div>
+
+            {isSyncing && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+                    <div className="bg-zinc-900 p-8 rounded-3xl border border-gray-800 text-center">
+                        <Loader2 className="animate-spin text-blue-500 mx-auto mb-4" size={48} />
+                        <h3 className="text-xl font-bold">Syncing with Device...</h3>
+                        <p className="text-gray-400 mt-2">Reading health metrics</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

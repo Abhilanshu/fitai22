@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Chatbot from '@/components/Chatbot';
+import { AuthProvider } from '../context/AuthContext';
+import { PWAProvider } from '../context/PWAContext';
+import InstallPWA from '@/components/InstallPWA'; // Import PWA Component
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FitAI - Personalized Fitness Plans",
+  title: "FitAI - Personal Trainer",
   description: "AI-powered workout and meal plans tailored to your goals.",
+  manifest: "/manifest.json", // Add Manifest Link
 };
 
 export default function RootLayout({
@@ -28,8 +32,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
-        <Chatbot />
+        <AuthProvider>
+          <PWAProvider>
+            {children}
+            <Chatbot />
+            <InstallPWA />
+          </PWAProvider>
+        </AuthProvider>
       </body>
     </html>
   );

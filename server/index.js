@@ -23,6 +23,8 @@ app.get('/', (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/user', require('./routes/user'));
 app.use('/api/plan', require('./routes/plan'));
+app.use('/api/leaderboard', require('./routes/leaderboard'));
+app.use('/api/history', require('./routes/history')); // New History API
 
 const PORT = process.env.PORT || 5000;
 
