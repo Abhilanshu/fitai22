@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
     ];
   },
   turbopack: {
+    root: '../',
     resolveAlias: {
       '@tensorflow/tfjs-backend-webgpu': { browser: '' },
     },
