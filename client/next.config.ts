@@ -10,14 +10,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  webpack: (config, { isServer }) => {
-    // Stub out the WebGPU backend - we only use WebGL
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@tensorflow/tfjs-backend-webgpu': false,
-    };
-    return config;
+  turbopack: {
+    resolveAlias: {
+      '@tensorflow/tfjs-backend-webgpu': { browser: '' },
+    },
   },
 };
 
 export default nextConfig;
+
