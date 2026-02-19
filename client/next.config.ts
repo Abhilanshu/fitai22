@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   transpilePackages: ['@tensorflow/tfjs', '@tensorflow-models/pose-detection'],
@@ -11,7 +12,7 @@ const nextConfig: NextConfig = {
     ];
   },
   turbopack: {
-    root: '../',
+    root: path.resolve(__dirname, '..'),
     resolveAlias: {
       '@tensorflow/tfjs-backend-webgpu': { browser: '' },
     },
@@ -19,4 +20,5 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
 
