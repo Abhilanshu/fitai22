@@ -25,4 +25,14 @@ services:
       - key: PYTHON_VERSION
         value: 3.9.0
 
-
+  - type: web
+    name: fitness-client
+    env: node
+    rootDir: client
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: https://fitness-server.onrender.com
