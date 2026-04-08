@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
   transpilePackages: ['@tensorflow/tfjs', '@tensorflow-models/pose-detection'],
+
   async rewrites() {
     return [
       {
@@ -11,14 +11,35 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  // ─── Webpack config (used for production builds) ──────────────────────────
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+      };
+    }
+
+    // Exclude @mediapipe/pose from webpack bundling.
+    // @tensorflow-models/pose-detection imports it, but we use MoveNet
+    // which doesn't actually need it at runtime.
+    config.externals = [
+      ...(Array.isArray(config.externals) ? config.externals : []),
+      { '@mediapipe/pose': 'MPPose' },
+    ];
+
+    return config;
+  },
+
+  // ─── Turbopack config (used for `next dev`) ───────────────────────────────
+  // Keep separate so Turbopack doesn't error on the mediapipe import either.
   turbopack: {
-    root: path.resolve(__dirname, '..'),
     resolveAlias: {
-      '@tensorflow/tfjs-backend-webgpu': { browser: '' },
+      '@mediapipe/pose': { browser: false },
     },
   },
 };
 
 export default nextConfig;
-
-
