@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { Play, Lock } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { programs } from '@/lib/programs';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Programs() {
     return (
@@ -34,6 +36,23 @@ export default function Programs() {
 
 function ProgramCard({ program }: { program: any }) {
     const [isPlaying, setIsPlaying] = useState(false);
+    const router = useRouter();
+    const { user } = useAuth();
+
+    const handlePlayClick = () => {
+        if (!user) {
+            router.push('/signup');
+            return;
+        }
+        setIsPlaying(true);
+    };
+
+    const handleProgramClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        if (!user) {
+            e.preventDefault();
+            router.push('/signup');
+        }
+    };
 
     return (
         <div className="group relative bg-zinc-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-gray-700 transition-all hover:-translate-y-2 duration-300">
@@ -51,7 +70,7 @@ function ProgramCard({ program }: { program: any }) {
                         className="absolute inset-0 w-full h-full"
                     ></iframe>
                 ) : (
-                    <div className="absolute inset-0 w-full h-full cursor-pointer group/video" onClick={() => setIsPlaying(true)}>
+                    <div className="absolute inset-0 w-full h-full cursor-pointer group/video" onClick={handlePlayClick}>
                         <img
                             src={`https://img.youtube.com/vi/${program.videoId}/maxresdefault.jpg`}
                             alt={program.title}
@@ -82,7 +101,7 @@ function ProgramCard({ program }: { program: any }) {
                     {program.description}
                 </p>
 
-                <Link href={`/programs/${program.id}`} className="w-full py-3 rounded-lg bg-white/5 hover:bg-white/10 text-white font-semibold transition-colors flex items-center justify-center gap-2 group-hover:text-blue-400">
+                <Link href={`/programs/${program.id}`} onClick={handleProgramClick} className="w-full py-3 rounded-lg bg-white/5 hover:bg-white/10 text-white font-semibold transition-colors flex items-center justify-center gap-2 group-hover:text-blue-400">
                     <Play size={16} fill="currentColor" />
                     {program.isPremium ? 'Unlock Program' : 'Start Program'}
                 </Link>
