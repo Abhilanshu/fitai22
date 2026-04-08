@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // ─── Webpack config (used for production builds) ──────────────────────────
+  // ─── Webpack config (used when Turbopack is NOT active) ──────────────────
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -23,8 +23,7 @@ const nextConfig: NextConfig = {
     }
 
     // Exclude @mediapipe/pose from webpack bundling.
-    // @tensorflow-models/pose-detection imports it, but we use MoveNet
-    // which doesn't actually need it at runtime.
+    // @tensorflow-models/pose-detection imports it, but MoveNet doesn't need it.
     config.externals = [
       ...(Array.isArray(config.externals) ? config.externals : []),
       { '@mediapipe/pose': 'MPPose' },
@@ -33,11 +32,12 @@ const nextConfig: NextConfig = {
     return config;
   },
 
-  // ─── Turbopack config (used for `next dev`) ───────────────────────────────
-  // Keep separate so Turbopack doesn't error on the mediapipe import either.
+  // ─── Turbopack config (Next.js 16 uses this for both dev & production) ───
   turbopack: {
     resolveAlias: {
-      '@mediapipe/pose': { browser: false },
+      // Redirect @mediapipe/pose to an empty mock module.
+      // MoveNet doesn't need MediaPipe at runtime — only BlazePose does.
+      '@mediapipe/pose': './mocks/mediapipe-pose.js',
     },
   },
 };
