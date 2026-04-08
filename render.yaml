@@ -1,6 +1,7 @@
 services:
+  # ─── Backend (Express API) ───────────────────────────────────────────────────
   - type: web
-    name: fitness-server
+    name: fitai22-server
     env: node
     rootDir: server
     buildCommand: npm install
@@ -11,28 +12,34 @@ services:
       - key: NODE_VERSION
         value: 20.9.0
       - key: MONGO_URI
-        sync: false
+        sync: false        # ← Set this manually in Render dashboard
       - key: JWT_SECRET
-        sync: false
+        sync: false        # ← Set this manually in Render dashboard
 
+  # ─── ML Service (Flask) ─────────────────────────────────────────────────────
   - type: web
-    name: fitness-ml-service
+    name: fitai22-ml
     env: python
     rootDir: ml_service
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
 
+  # ─── Frontend (Next.js) ─────────────────────────────────────────────────────
   - type: web
-    name: fitness-client
+    name: fitai22-client
     env: node
     rootDir: client
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
+      - key: NODE_VERSION
+        value: 20.9.0
       - key: NODE_ENV
         value: production
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=1536
       - key: NEXT_PUBLIC_API_URL
-        value: https://fitness-server.onrender.com
+        value: https://fitai22-7.onrender.com   # Your existing backend URL
