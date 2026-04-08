@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+const express = require('express');
+const router = express.Router();
 
 // Knowledge Base
 const knowledgeBase = [
@@ -68,9 +69,16 @@ const knowledgeBase = [
     }
 ];
 
-export async function POST(req: Request) {
+// @route   POST api/chat
+// @desc    Process chatbot message
+// @access  Public (or Private if you add auth later)
+router.post('/', async (req, res) => {
     try {
-        const { message } = await req.json();
+        const { message } = req.body;
+        if (!message) {
+            return res.status(400).json({ msg: 'Message is required' });
+        }
+        
         const lowerMsg = message.toLowerCase();
 
         // Scoring System
@@ -94,9 +102,11 @@ export async function POST(req: Request) {
             reply = knowledgeBase[bestMatch.index].response;
         }
 
-        return NextResponse.json({ reply });
-    } catch (err: any) {
-        console.error(err.message);
-        return NextResponse.json({ msg: 'Server Error' }, { status: 500 });
+        res.json({ reply });
+    } catch (err) {
+        console.error('Chat error:', err.message);
+        res.status(500).json({ msg: 'Server Error' });
     }
-}
+});
+
+module.exports = router;

@@ -25,6 +25,7 @@ app.use('/api/user', require('./routes/user'));
 app.use('/api/plan', require('./routes/plan'));
 app.use('/api/leaderboard', require('./routes/leaderboard'));
 app.use('/api/history', require('./routes/history')); // New History API
+app.use('/api/chat', require('./routes/chat')); // Chat API
 
 const PORT = process.env.PORT || 5000;
 
