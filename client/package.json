@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "render-build": "npm install --include=dev && next build"
+    "render-build": "npm install --include=dev --legacy-peer-deps && next build"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
