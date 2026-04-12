@@ -6,7 +6,7 @@ import * as tf from '@tensorflow/tfjs';
 import * as poseDetection from '@tensorflow-models/pose-detection';
 import '@tensorflow/tfjs-backend-webgl'; // Register WebGL backend
 import { analyzeExercise, ExerciseType, resetState } from '../utils/exerciseLogic';
-import { Camera, ChevronDown, Activity, RefreshCw, Maximize } from 'lucide-react';
+import { Camera, ChevronDown, Activity, RefreshCw, Maximize, Mic, MicOff } from 'lucide-react';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import MotionAvatar from './MotionAvatar';
@@ -31,6 +31,8 @@ export default function AITracker({ initialExercise = 'Squat' }: AITrackerProps)
     const [feedback, setFeedback] = useState('Loading AI Model...');
     const [isCorrect, setIsCorrect] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef<any>(null);
 
     // Refs for accessing state inside the loop without dependencies
     const detectorRef = useRef<poseDetection.PoseDetector | null>(null);
@@ -306,6 +308,69 @@ export default function AITracker({ initialExercise = 'Squat' }: AITrackerProps)
         speakFeedback('Counter Reset');
     };
 
+    // Voice Command Integration
+    useEffect(() => {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SpeechRecognition && !recognitionRef.current) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event: any) => {
+                const command = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
+                console.log("Voice Command:", command);
+                
+                if (command.includes('reset') || command.includes('restart')) {
+                    resetCounter();
+                } else if (command.includes('fullscreen')) {
+                    toggleFullscreen();
+                } else if (command.includes('save') || command.includes('finish') || command.includes('done')) {
+                    saveWorkout();
+                } else {
+                    Exercises.forEach(ex => {
+                        if (command.includes(ex.toLowerCase())) {
+                            setSelectedExercise(ex);
+                            resetState();
+                            setReps(0);
+                        }
+                    });
+                }
+            };
+            
+            recognition.onend = () => {
+                if (isListening) recognition.start(); // Auto-restart if active
+            };
+
+            recognition.onerror = (e: any) => console.error("Speech Error:", e.error);
+            recognitionRef.current = recognition;
+        }
+
+        return () => {
+            if (recognitionRef.current) {
+                recognitionRef.current.stop();
+            }
+        };
+    }, [isListening]); // Rebind start logic safely
+
+    const toggleVoiceControl = () => {
+        if (!recognitionRef.current) {
+            setFeedback("Speech Recognition not supported on this browser.");
+            return;
+        }
+        if (isListening) {
+            setIsListening(false);
+            recognitionRef.current.stop();
+            speakFeedback("Voice command deactivated");
+            setFeedback("Voice Control Disabled");
+        } else {
+            setIsListening(true);
+            recognitionRef.current.start();
+            speakFeedback("Voice command activated");
+            setFeedback("Listening for Voice Commands...");
+        }
+    };
+
     return (
         <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-[9999] bg-black flex items-center justify-center p-0' : 'flex flex-col items-center justify-center p-4 w-full h-full bg-black/40 rounded-3xl border border-gray-800 backdrop-blur-sm'}`}>
 
@@ -360,6 +425,14 @@ export default function AITracker({ initialExercise = 'Squat' }: AITrackerProps)
                         title={isMuted ? "Unmute Voice Coach" : "Mute Voice Coach"}
                     >
                         {isMuted ? "🔇" : "🔊"}
+                    </button>
+
+                    <button
+                        onClick={toggleVoiceControl}
+                        className={`p-2 rounded-xl transition-colors flex items-center justify-center ${isListening ? 'bg-green-600 hover:bg-green-700 text-white shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
+                        title={isListening ? "Stop Voice Commands" : "Start Voice Commands"}
+                    >
+                        {isListening ? <Mic className="w-5 h-5 animate-pulse" /> : <MicOff className="w-5 h-5" />}
                     </button>
 
                     <button
