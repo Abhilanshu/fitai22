@@ -1,11 +1,20 @@
 // Empty mock for @mediapipe/pose
-// @tensorflow-models/pose-detection imports this, but we only use MoveNet
-// which does NOT actually require @mediapipe/pose at runtime.
 // This mock prevents Turbopack/Webpack bundling errors.
 
-exports.Pose = function () {};
-exports.POSE_CONNECTIONS = [];
-exports.POSE_LANDMARKS = {};
-exports.POSE_LANDMARKS_LEFT = {};
-exports.POSE_LANDMARKS_RIGHT = {};
-exports.POSE_LANDMARKS_NEUTRAL = {};
+const mockPose = {
+    Pose: function () {},
+    POSE_CONNECTIONS: [],
+    POSE_LANDMARKS: {},
+    POSE_LANDMARKS_LEFT: {},
+    POSE_LANDMARKS_RIGHT: {},
+    POSE_LANDMARKS_NEUTRAL: {}
+};
+
+// Next.js client-side module execution expects this globally since we alias it!
+if (typeof globalThis !== 'undefined') {
+    globalThis.MPPose = mockPose;
+} else if (typeof window !== 'undefined') {
+    window.MPPose = mockPose;
+}
+
+module.exports = mockPose;

@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   title: "FitAI - Personal Trainer",
   description: "AI-powered workout and meal plans tailored to your goals.",
   manifest: "/manifest.json", // Add Manifest Link
+  icons: {
+    apple: "/icon-192.png",
+  },
 };
 
 export default function RootLayout({
