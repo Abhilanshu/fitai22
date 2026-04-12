@@ -46,20 +46,30 @@ export default function AITracker({ initialExercise = 'Squat' }: AITrackerProps)
     useEffect(() => {
         const loadModel = async () => {
             try {
+                setFeedback('Waking up AI model...');
                 await tf.setBackend('webgl');
                 await tf.ready();
-                const detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, {
-                    modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING
-                });
+
+                // MoveNet is the faster, more efficient model for most poses
+                const detectorConfig = {
+                    modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+                    enableSmoothing: true
+                };
+
+                const detector = await poseDetection.createDetector(
+                    poseDetection.SupportedModels.MoveNet,
+                    detectorConfig
+                );
+                
                 detectorRef.current = detector;
                 setIsLoading(false);
-                setFeedback('Ready! Stand in frame.');
+                setFeedback('Ready! Point your camera.');
 
                 // Start detection loop
                 startLoop();
             } catch (err) {
                 console.error("Failed to load AI model", err);
-                setFeedback("Error loading AI. Refresh page.");
+                setFeedback("Error loading AI. Using standby mode.");
             }
         };
 

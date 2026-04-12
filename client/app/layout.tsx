@@ -5,7 +5,7 @@ import Chatbot from '@/components/Chatbot';
 import { AuthProvider } from '../context/AuthContext';
 import { PWAProvider } from '../context/PWAContext';
 import InstallPWA from '@/components/InstallPWA'; // Import PWA Component
-
+import Script from 'next/script';
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -32,6 +32,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" strategy="beforeInteractive" />
         <AuthProvider>
           <PWAProvider>
             {children}
