@@ -16,12 +16,11 @@ const nextConfig: NextConfig = {
       };
     }
 
-    // Exclude @mediapipe/pose from webpack bundling.
-    // @tensorflow-models/pose-detection imports it, but MoveNet doesn't need it.
-    config.externals = [
-      ...(Array.isArray(config.externals) ? config.externals : []),
-      { '@mediapipe/pose': 'MPPose' },
-    ];
+    // Instead of externalizing and causing ReferenceErrors, alias it to the mock file!
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@mediapipe/pose': require('path').resolve(__dirname, 'mocks/mediapipe-pose.js'),
+    };
 
     return config;
   },
