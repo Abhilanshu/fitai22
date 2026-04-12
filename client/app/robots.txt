@@ -1,0 +1,4 @@
+User-Agent: *
+Allow: /
+
+Sitemap: https://fitai22-8.onrender.com/sitemap.xml

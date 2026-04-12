@@ -17,9 +17,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FitAI - Personal Trainer",
-  description: "AI-powered workout and meal plans tailored to your goals.",
-  manifest: "/manifest.json", // Add Manifest Link
+  title: "FitAI - Your Ultimate Personal AI Trainer",
+  description: "FitAI is a revolutionary AI-powered workout tracker and meal planner. Use your phone camera for real-time form correction, voice-controlled workouts, and diet tracking.",
+  keywords: ["FitAI", "Fit AI", "AI Trainer", "Workout Tracker", "AI form correction", "Fitness App", "Home Workout", "AI Coach"],
+  authors: [{ name: "Abhilanshu" }],
+  openGraph: {
+    title: "FitAI - Personal Trainer",
+    description: "Get real-time AI form correction, voice-controlled tracking, and automated diet plans directly from your browser. No app install needed!",
+    url: "https://fitai22-8.onrender.com",
+    siteName: "FitAI",
+    type: "website",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  manifest: "/manifest.json",
   icons: {
     apple: "/icon-192.png",
   },
