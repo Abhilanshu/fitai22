@@ -3,14 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   transpilePackages: ['@tensorflow/tfjs', '@tensorflow-models/pose-detection'],
 
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/:path*`,
-      },
-    ];
-  },
+  // Removed rewrites() proxy to prevent 508 loop errors on Render
+  // The frontend now makes direct requests to the backend API via NEXT_PUBLIC_API_URL.
 
   // ─── Webpack config (used when Turbopack is NOT active) ──────────────────
   webpack: (config, { isServer }) => {
